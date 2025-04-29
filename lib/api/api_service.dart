@@ -74,50 +74,54 @@ class ApiService {
 
   // UPDATE Report
   static Future<Map<String, dynamic>> updateReport(
-    String id,
-    CusServ rep,
-    File? imageFile, {
-    String? currentImageUrl, // tambahkan jika ingin handle gambar lama
-  }) async {
-    final uri = Uri.parse('$baseUrl/2355011002/$id');
-    final request = http.MultipartRequest('POST', uri);
+  String id,
+  CusServ rep,
+  File? imageFile, {
+  String? currentImageUrl,
+}) async {
+  final uri = Uri.parse('$baseUrl/$id');
+  final request = http.MultipartRequest('POST', uri);
 
-    // Kirim data field
-    request.fields['title_issues'] = rep.titleIssues;
-    request.fields['description_issues'] = rep.descriptionIssues;
-    request.fields['rating'] = rep.rating.toString();
-    request.fields['id_division_target'] = rep.idDivisionTarget.toString();
-    request.fields['id_priority'] = rep.idPriority.toString();
+  request.headers['Accept'] = 'application/json';
 
-    // Kirim file jika ada
-    if (imageFile != null && imageFile.path.isNotEmpty) {
-      var stream = http.ByteStream(imageFile.openRead());
-      var length = await imageFile.length();
-      var multipartFile = http.MultipartFile(
-        'image',
-        stream,
-        length,
-        filename: imageFile.path.split('/').last,
-        contentType: MediaType('image', 'jpeg'), // ubah sesuai jenis file
-      );
-      request.files.add(multipartFile);
-    } else if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
-      request.fields['existing_image_url'] = currentImageUrl;
-    }
+  request.fields.addAll({
+    'title_issues': rep.titleIssues,
+    'description_issues': rep.descriptionIssues,
+    'rating': rep.rating.toString(),
+    'id_division_target': rep.idDivisionTarget.toString(),
+    'id_priority': rep.idPriority.toString(),
+  });
 
-    try {
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return json.decode(responseBody);
-      } else {
-        throw Exception('Gagal mengubah laporan: $responseBody');
-      }
-    } catch (e) {
-      throw Exception('Terjadi kesalahan saat mengubah laporan: $e');
-    }
+  if (imageFile != null) {
+    var stream = http.ByteStream(imageFile.openRead());
+    var length = await imageFile.length();
+    var multipartFile = http.MultipartFile(
+      'image',
+      stream,
+      length,
+      filename: imageFile.path.split('/').last,
+      contentType: MediaType('image', 'jpeg'),
+    );
+    request.files.add(multipartFile);
+  } else if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
+    request.fields['existing_image_url'] = currentImageUrl;
   }
+
+  try {
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(responseBody);
+    } else {
+      print('Error Response: $responseBody'); // Debug
+      throw Exception('Failed to update report: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error: $e'); // Debug
+    throw Exception('Error updating report: $e');
+  }
+}
 
   // DELETE Report
   static Future<void> deleteReport(String id) async {
